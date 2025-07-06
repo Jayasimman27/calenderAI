@@ -33,7 +33,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    try:
+        # Test basic functionality
+        return {
+            "status": "healthy", 
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "TailorTalk API is running"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }
 
 @app.get("/ping")
 async def ping():
