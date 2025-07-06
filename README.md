@@ -185,7 +185,8 @@ Adjust calendar behavior in `app/calendar_utils.py`:
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
+#Deployment 
+I tried to deploy in railway and render but due to time constraints i couldn't 
 ## 🙏 Acknowledgments
 
 - [FastAPI](https://fastapi.tiangolo.com/) for the web framework
