@@ -1,14 +1,6 @@
 import os
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from langchain.schema import HumanMessage, SystemMessage
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.memory import ConversationBufferMemory
-from langchain.agents import Tool, AgentExecutor, initialize_agent, AgentType
-from langchain.schema import AgentAction, AgentFinish
-from langchain.prompts import StringPromptTemplate
-from pydantic import BaseModel, Field, SecretStr
 import re
 
 from .calendar_utils import GoogleCalendarManager
@@ -26,66 +18,12 @@ class TailorTalkAgent:
         # Initialize calendar manager
         self.calendar_manager = GoogleCalendarManager()
         
-        # Initialize memory
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
-        
-        # Define tools
-        self.tools = [
-            Tool(
-                name="get_calendar_events",
-                func=self._get_calendar_events,
-                description="Get upcoming calendar events for the next 7 days"
-            ),
-            Tool(
-                name="create_calendar_event",
-                func=self._create_calendar_event,
-                description="Create a new calendar event with title, start time, end time, and optional description"
-            ),
-            Tool(
-                name="delete_calendar_event",
-                func=self._delete_calendar_event,
-                description="Delete a calendar event by its ID"
-            ),
-            Tool(
-                name="update_calendar_event",
-                func=self._update_calendar_event,
-                description="Update an existing calendar event by its ID"
-            )
-        ]
-        
-        # For now, we'll use a simpler approach without LangChain agents
-        # The tools will be called directly from the process_message method
-        pass
+        # Initialize simple memory for chat history
+        self.chat_history = []
     
 
     
-    def _parse_output(self, text: str) -> AgentAction | AgentFinish:
-        """
-        Parse the agent's output to determine the next action
-        """
-        if "Final Answer:" in text:
-            return AgentFinish(
-                return_values={"output": text.split("Final Answer:")[-1].strip()},
-                log=text,
-            )
-        
-        # Parse action and action input
-        regex = r"Action: (.*?)[\n]*Action Input: (.*)"
-        match = re.search(regex, text, re.DOTALL)
-        
-        if not match:
-            return AgentFinish(
-                return_values={"output": "I couldn't understand what action to take."},
-                log=text,
-            )
-        
-        action = match.group(1).strip()
-        action_input = match.group(2).strip()
-        
-        return AgentAction(tool=action, tool_input=action_input, log=text)
+
     
     async def process_message(self, message: str) -> str:
         """
