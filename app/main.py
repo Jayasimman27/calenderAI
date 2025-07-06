@@ -29,7 +29,11 @@ agent = TailorTalkAgent()
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to TailorTalk API"}
+    return {
+        "message": "Welcome to TailorTalk API",
+        "status": "running",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @app.get("/health")
 async def health_check():
