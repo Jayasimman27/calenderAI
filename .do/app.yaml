@@ -1,0 +1,17 @@
+name: tailortalk
+services:
+  - name: web
+    source_dir: /
+    github:
+      repo: Jayasimman27/tailortalk
+      branch: main
+    run_command: python start.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: PORT
+        value: 8004
+      - key: GOOGLE_SERVICE_ACCOUNT
+        scope: RUN_AND_BUILD_TIME
+        value: ${GOOGLE_SERVICE_ACCOUNT} 

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import os
 from datetime import datetime, timezone
 import time
 
@@ -47,7 +48,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # API configuration
-API_BASE_URL = "http://localhost:8004"
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://tailortalk-8740.onrender.com")
 
 def check_api_health():
     """Check if the API is running"""

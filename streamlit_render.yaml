@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: tailortalk-frontend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run streamlit_app/frontend.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8501
+      - key: API_BASE_URL
+        value: https://tailortalk-8740.onrender.com 
