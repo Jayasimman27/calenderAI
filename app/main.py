@@ -1,17 +1,29 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 from typing import List, Optional
 from datetime import datetime
 import uvicorn
-import os
-from dotenv import load_dotenv
+import sys
 
 # Load environment variables
-load_dotenv()
+
+print('DEBUG: Current working directory:', os.getcwd())
+print('DEBUG: MISTRAL_API_KEY from env:', os.environ.get('MISTRAL_API_KEY'))
+api_key = os.environ.get('MISTRAL_API_KEY')
+if not api_key:
+    print('ERROR: MISTRAL_API_KEY environment variable not set. Please check your .env file and restart the backend.')
+    sys.exit(1)
 
 from .models import ChatMessage, ChatResponse
-from .agent import TailorTalkAgent
+from langchain.agents import initialize_agent, AgentType
+from langchain_mistralai.chat_models import ChatMistralAI
+from app.langchain_tools import tools
 
 app = FastAPI(title="TailorTalk API", version="1.0.0")
 
@@ -24,8 +36,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the agent
-agent = TailorTalkAgent()
+# Initialize LangChain agent
+llm = ChatMistralAI(api_key=SecretStr(api_key))
+agent = initialize_agent(
+    tools,
+    llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True
+)
 
 @app.get("/")
 async def root():
@@ -58,12 +76,20 @@ async def ping():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(message: ChatMessage):
     """
-    Process a chat message and return the agent's response
+    Process a chat message and return the agent's response using LangChain
     """
     try:
-        response = await agent.process_message(message.content)
+        print("DEBUG: ChatMessage received:", message)
+        print("DEBUG: access_token:", message.access_token)
+        # Pass only the user message string as a dict with 'input' key
+        response = agent.invoke({"input": message.content})
+        # Ensure response is a string for ChatResponse
+        if isinstance(response, dict):
+            response_message = response.get('output', str(response))
+        else:
+            response_message = str(response)
         return ChatResponse(
-            message=response,
+            message=response_message,
             timestamp=message.timestamp or datetime.utcnow(),
             success=True,
             error=None
@@ -77,8 +103,10 @@ async def get_calendar_events():
     Get upcoming calendar events
     """
     try:
-        events = agent.calendar_manager.get_upcoming_events()
-        return {"events": events}
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -89,14 +117,10 @@ async def create_calendar_event(event_data: dict):
     """
     try:
         # Use the calendar manager directly
-        event = agent.calendar_manager.create_event(
-            summary=event_data["summary"],
-            start_time=event_data["start_time"],
-            end_time=event_data["end_time"],
-            description=event_data.get("description", ""),
-            location=event_data.get("location", "")
-        )
-        return {"event": event, "message": "Event created successfully"}
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -106,11 +130,49 @@ async def delete_calendar_event(event_id: str):
     Delete a calendar event
     """
     try:
-        success = agent.calendar_manager.delete_event(event_id)
-        if success:
-            return {"message": "Event deleted successfully"}
-        else:
-            raise HTTPException(status_code=404, detail="Event not found")
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/calendar/events/{event_id}")
+async def update_calendar_event(event_id: str, event_data: dict):
+    """
+    Update an existing calendar event
+    """
+    try:
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/calendar/events/search")
+async def search_calendar_events(query: str):
+    """
+    Search for calendar events by title
+    """
+    try:
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/calendar/events/{event_id}")
+async def get_calendar_event(event_id: str):
+    """
+    Get a specific calendar event by ID
+    """
+    try:
+        # The calendar manager is no longer part of TailorTalkAgent,
+        # so this endpoint will need to be refactored or removed if not used.
+        # For now, returning a placeholder message.
+        return {"message": "Calendar functionality is currently disabled."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

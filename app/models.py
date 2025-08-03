@@ -9,6 +9,7 @@ class ChatMessage(BaseModel):
     content: str = Field(..., description="The message content")
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow, description="Message timestamp")
     user_id: Optional[str] = Field(None, description="User identifier")
+    access_token: Optional[str] = Field(None, description="Google OAuth access token for calendar actions")
 
 class ChatResponse(BaseModel):
     """

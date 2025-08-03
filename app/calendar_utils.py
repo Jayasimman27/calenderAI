@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.oauth2.credentials import Credentials
 
 class GoogleCalendarManager:
     def __init__(self, service_account_file: str = "service_account.json"):
@@ -42,10 +43,25 @@ class GoogleCalendarManager:
             print(f"Error authenticating with Google Calendar: {e}")
             raise
     
-    def get_upcoming_events(self, max_results: int = 10) -> List[Dict[str, Any]]:
+    def set_user_access_token(self, access_token: str):
+        """
+        Set the service to use a user's OAuth access token
+        """
+        if not access_token:
+            return
+        try:
+            credentials = Credentials(token=access_token, scopes=['https://www.googleapis.com/auth/calendar'])
+            self.service = build('calendar', 'v3', credentials=credentials)
+        except Exception as e:
+            print(f"Error authenticating with user access token: {e}")
+            raise
+
+    def get_upcoming_events(self, max_results: int = 10, access_token: str = "") -> List[Dict[str, Any]]:
         """
         Get upcoming calendar events
         """
+        if access_token:
+            self.set_user_access_token(access_token)
         if self.service is None:
             raise Exception("Google Calendar service not initialized")
             
@@ -53,8 +69,10 @@ class GoogleCalendarManager:
             now = datetime.utcnow().isoformat() + 'Z'
             end_time = (datetime.utcnow() + timedelta(days=7)).isoformat() + 'Z'
             
+            calendar_id = 'primary'
+            
             events_result = self.service.events().list(
-                calendarId='primary',
+                calendarId=calendar_id,
                 timeMin=now,
                 timeMax=end_time,
                 maxResults=max_results,
@@ -79,10 +97,12 @@ class GoogleCalendarManager:
             return []
     
     def create_event(self, summary: str, start_time: str, end_time: str, 
-                    description: str = "", location: str = "") -> Dict[str, Any]:
+                    description: str = "", location: str = "", access_token: str = "") -> Dict[str, Any]:
         """
         Create a new calendar event
         """
+        if access_token:
+            self.set_user_access_token(access_token)
         if self.service is None:
             raise Exception("Google Calendar service not initialized")
             
@@ -101,10 +121,7 @@ class GoogleCalendarManager:
                 },
             }
             
-            # Use the user's personal calendar ID
-            # You can replace this with your actual calendar ID
-            # To find your calendar ID: https://calendar.google.com/calendar/r/settings
-            calendar_id = '5b362d7633e57a3212d5df37c4ac2703521deb9f9d7b2f7723a8b944791616d5@group.calendar.google.com'  # This should be your personal calendar
+            calendar_id = 'primary'
             
             event = self.service.events().insert(
                 calendarId=calendar_id,
@@ -123,16 +140,19 @@ class GoogleCalendarManager:
             print(f"Error creating calendar event: {error}")
             raise
     
-    def delete_event(self, event_id: str) -> bool:
+    def delete_event(self, event_id: str, access_token: str = "") -> bool:
         """
         Delete a calendar event
         """
+        if access_token:
+            self.set_user_access_token(access_token)
         if self.service is None:
             raise Exception("Google Calendar service not initialized")
             
         try:
+            calendar_id = 'primary'
             self.service.events().delete(
-                calendarId='primary',
+                calendarId=calendar_id,
                 eventId=event_id
             ).execute()
             return True
@@ -140,16 +160,19 @@ class GoogleCalendarManager:
             print(f"Error deleting calendar event: {error}")
             return False
     
-    def update_event(self, event_id: str, **kwargs) -> Dict[str, Any]:
+    def update_event(self, event_id: str, access_token: str = "", **kwargs) -> Dict[str, Any]:
         """
         Update an existing calendar event
         """
+        if access_token:
+            self.set_user_access_token(access_token)
         if self.service is None:
             raise Exception("Google Calendar service not initialized")
             
         try:
+            calendar_id = 'primary'
             event = self.service.events().get(
-                calendarId='primary',
+                calendarId=calendar_id,
                 eventId=event_id
             ).execute()
             
@@ -166,7 +189,7 @@ class GoogleCalendarManager:
                 event['end']['dateTime'] = kwargs['end_time']
             
             updated_event = self.service.events().update(
-                calendarId='primary',
+                calendarId=calendar_id,
                 eventId=event_id,
                 body=event
             ).execute()
@@ -181,4 +204,76 @@ class GoogleCalendarManager:
             }
         except HttpError as error:
             print(f"Error updating calendar event: {error}")
-            raise 
+            raise
+    
+    def find_event_by_title(self, title: str, access_token: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Find an event by its title (case-insensitive partial match)
+        """
+        if access_token:
+            self.set_user_access_token(access_token)
+        if self.service is None:
+            raise Exception("Google Calendar service not initialized")
+            
+        try:
+            now = datetime.utcnow().isoformat() + 'Z'
+            end_time = (datetime.utcnow() + timedelta(days=30)).isoformat() + 'Z'
+            
+            calendar_id = 'primary'
+            
+            events_result = self.service.events().list(
+                calendarId=calendar_id,
+                timeMin=now,
+                timeMax=end_time,
+                maxResults=50,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            
+            events = events_result.get('items', [])
+            title_lower = title.lower()
+            
+            for event in events:
+                event_title = event.get('summary', '').lower()
+                if title_lower in event_title or event_title in title_lower:
+                    return {
+                        'id': event['id'],
+                        'summary': event.get('summary', 'No title'),
+                        'start': event['start'].get('dateTime', event['start'].get('date')),
+                        'end': event['end'].get('dateTime', event['end'].get('date')),
+                        'description': event.get('description', ''),
+                        'location': event.get('location', '')
+                    }
+            
+            return None
+        except HttpError as error:
+            print(f"Error finding event by title: {error}")
+            return None
+
+    def get_event_by_id(self, event_id: str, access_token: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Get a specific event by its ID
+        """
+        if access_token:
+            self.set_user_access_token(access_token)
+        if self.service is None:
+            raise Exception("Google Calendar service not initialized")
+            
+        try:
+            calendar_id = 'primary'
+            event = self.service.events().get(
+                calendarId=calendar_id,
+                eventId=event_id
+            ).execute()
+            
+            return {
+                'id': event['id'],
+                'summary': event.get('summary', 'No title'),
+                'start': event['start'].get('dateTime', event['start'].get('date')),
+                'end': event['end'].get('dateTime', event['end'].get('date')),
+                'description': event.get('description', ''),
+                'location': event.get('location', '')
+            }
+        except HttpError as error:
+            print(f"Error getting event by ID: {error}")
+            return None 
