@@ -96,10 +96,4 @@ npm run dev
   - "Delete the event 'dinner with friends' on July 25"
 - All actions are performed on your real Google Calendar!
 
-## 🔧 Configuration
 
-- **Backend:**
-  - Edit `app/agent.py` for AI logic and intent extraction
-  - Edit `app/calendar_utils.py` for Google Calendar API logic
-- **Frontend:**
-  - Edit `frontend/src/` for React components and UI
